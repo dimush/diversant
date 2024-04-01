@@ -50,7 +50,7 @@ public class DiversantFreeActivity extends Activity {
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
         // Create the adView
 		mAdView = new AdView(this);
-		mAdView.setAdSize(AdSize.SMART_BANNER);
+		mAdView.setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(getApplicationContext(), AdSize.FULL_WIDTH));
 		// Test banner
 		//mAdView.setAdUnitId("ca-app-pub-3940256099942544/6300978111");
 		mAdView.setAdUnitId("ca-app-pub-1665272374483034/2280326108");
