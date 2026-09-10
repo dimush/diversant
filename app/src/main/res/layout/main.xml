@@ -1,21 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/rootLayout"
-    android:layout_width="fill_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical" >
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" >
 
     <org.softosaurus.diversantfree.MySurfaceView
         android:id="@+id/mySurfaceView1"
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
-        android:layout_weight="1" />
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
+    <!--
+      The banner is overlaid on the bottom of the surface instead of taking a row
+      of its own, so the playfield never changes size (a resize would recreate the
+      Gun and reset the game state). It is only visible while the game is paused
+      or over, when nothing interactive sits at the bottom of the screen.
+    -->
     <LinearLayout
         android:id="@+id/linearLayout1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical" >
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:visibility="gone" >
     </LinearLayout>
 
-</LinearLayout>
+</FrameLayout>

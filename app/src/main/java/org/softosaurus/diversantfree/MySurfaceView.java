@@ -60,13 +60,55 @@ public class MySurfaceView extends android.view.SurfaceView implements SurfaceHo
 	private RectF pauseButtonRect;
 	private Paint p = new Paint();		
 	private boolean isPaused = false;
-	
+	/** Height (px) of the ad banner overlaid on the bottom, so the score stays visible. */
+	private volatile int bannerInset = 0;
+
+	/** Notified when the game switches between active play and paused / game over. */
+	public interface GameStateListener {
+		void onGameplayActiveChanged(boolean active);
+	}
+
+	private GameStateListener gameStateListener;
+	private boolean lastGameplayActive = true;
+
+	public void setGameStateListener(GameStateListener listener) {
+		gameStateListener = listener;
+	}
+
+	public void setBannerInset(int px) {
+		bannerInset = px;
+	}
+
+	private boolean isGameplayActive() {
+		return !isPaused && (gun == null || gun.state != Gun.STATE_GAME_OVER);
+	}
+
+	/**
+	 * Fires the listener only on a transition, never per frame. Called at the end of
+	 * every draw (covers pause taps, the game loop reaching GAME_OVER and reset())
+	 * and from setPaused() for the help dialog, which may run while the loop is idle.
+	 */
+	private void notifyGameplayState() {
+		boolean active = isGameplayActive();
+		if(active == lastGameplayActive) return;
+		lastGameplayActive = active;
+		final GameStateListener listener = gameStateListener;
+		if(listener == null) return;
+		post(new Runnable() {
+			@Override
+			public void run() {
+				listener.onGameplayActiveChanged(active);
+			}
+		});
+	}
+
 	public boolean isPaused() {
 		return isPaused;
 	}
 
 	public void setPaused(boolean isPaused) {
 		this.isPaused = isPaused;
+		notifyGameplayState();
 	}
 
 	private boolean lastPaused = false;
@@ -611,7 +653,7 @@ public class MySurfaceView extends android.view.SurfaceView implements SurfaceHo
 		 */
 		p.setTextSize(w/16);
 		p.setTextAlign(Align.CENTER);
-		can.drawText(String.valueOf(score), gun.cent, h - 2, p);
+		can.drawText(String.valueOf(score), gun.cent, h - 2 - bannerInset, p);
 		/**
 		 * Change Game Flow
 		 */
@@ -630,6 +672,7 @@ public class MySurfaceView extends android.view.SurfaceView implements SurfaceHo
 			MediaPlayer mp = MediaPlayer.create(context, R.raw.planes_approach);
 			mp.start();
 		}
+		notifyGameplayState();
 	}
 
 	@Override

@@ -35,6 +35,7 @@ public class DiversantFreeActivity extends Activity {
 	private LinearLayout bannerLayout;
 	private ConsentInformation consentInformation;
 	private final AtomicBoolean adsInitialized = new AtomicBoolean(false);
+	private final AtomicBoolean bannerCreated = new AtomicBoolean(false);
 	static final int DIALOG_HELP = 1;
 
     /** Called when the activity is first created. */
@@ -56,39 +57,73 @@ public class DiversantFreeActivity extends Activity {
 
         bannerLayout = findViewById(R.id.linearLayout1);
 
+        msv = (MySurfaceView)this.findViewById(R.id.mySurfaceView1);
+        msv.setGameStateListener(this::onGameplayActiveChanged);
+        // Keep the score above whatever the banner actually occupies: an unfilled
+        // banner measures 0 high, so the score must not be pushed up for nothing.
+        bannerLayout.addOnLayoutChangeListener(
+                (v, l, t, r, b, ol, ot, or_, ob) -> msv.setBannerInset(
+                        v.getVisibility() == View.VISIBLE ? b - t : 0));
+        setVolumeControlStream(AudioManager.STREAM_MUSIC);
+        new Thread(msv).start();
+
         // GDPR / US-states consent via User Messaging Platform, then ads.
         ConsentRequestParameters params = new ConsentRequestParameters.Builder().build();
         consentInformation = UserMessagingPlatform.getConsentInformation(this);
         consentInformation.requestConsentInfoUpdate(this, params,
-                () -> UserMessagingPlatform.loadAndShowConsentFormIfRequired(this, formError -> {
-                    if (consentInformation.canRequestAds()) {
-                        initializeAds();
-                    }
-                }),
+                () -> UserMessagingPlatform.loadAndShowConsentFormIfRequired(this, formError -> onConsentResolved()),
                 requestError -> {
                     // Consent info unavailable (e.g. offline); ads may still be allowed.
-                    if (consentInformation.canRequestAds()) {
-                        initializeAds();
-                    }
+                    onConsentResolved();
                 });
-        if (consentInformation.canRequestAds()) {
-            initializeAds();
-        }
+        onConsentResolved();
 
-        msv = (MySurfaceView)this.findViewById(R.id.mySurfaceView1);
-        Thread thr = new Thread(msv);
-        thr.start();
-        setVolumeControlStream(AudioManager.STREAM_MUSIC);
     }
 
-	private void initializeAds() {
+	/** Consent flow finished (or was not needed): initialise the SDK and, if the
+	 *  banner is already on screen, create and load it right away. */
+	private void onConsentResolved() {
+		if (!consentInformation.canRequestAds()) return;
+		initializeMobileAds();
+		if (bannerLayout.getVisibility() == View.VISIBLE) {
+			createAndLoadBannerIfNeeded();
+		}
+	}
+
+	private void initializeMobileAds() {
 		if (!adsInitialized.compareAndSet(false, true)) return;
 		MobileAds.initialize(this, initializationStatus -> { });
+	}
+
+	/**
+	 * Creates the AdView and issues the first request. Only ever called while the
+	 * banner container is visible, so no impression is served off screen.
+	 */
+	private void createAndLoadBannerIfNeeded() {
+		if (!adsInitialized.get()) return;
+		if (!bannerCreated.compareAndSet(false, true)) return;
 		mAdView = new AdView(this);
 		mAdView.setAdUnitId("ca-app-pub-1665272374483034/2280326108");
 		mAdView.setAdSize(getAdaptiveBannerSize());
 		bannerLayout.addView(mAdView);
 		mAdView.loadAd(new AdRequest.Builder().build());
+	}
+
+	/**
+	 * The banner is overlaid on the bottom of the playfield and shown only while the
+	 * game is paused or over; during play it is GONE and the AdView is paused, so it
+	 * neither refreshes nor records impressions.
+	 */
+	private void onGameplayActiveChanged(boolean active) {
+		if (active) {
+			if (mAdView != null) mAdView.pause();
+			bannerLayout.setVisibility(View.GONE);
+			msv.setBannerInset(0);
+		} else {
+			bannerLayout.setVisibility(View.VISIBLE);
+			createAndLoadBannerIfNeeded();
+			if (mAdView != null) mAdView.resume();
+		}
 	}
 
 	private AdSize getAdaptiveBannerSize() {
@@ -139,7 +174,8 @@ public class DiversantFreeActivity extends Activity {
 	@Override
 	protected void onResume() {
 		super.onResume();
-		if (mAdView != null) mAdView.resume();
+		// Only resume (and thus refresh) the banner when it is actually on screen.
+		if (mAdView != null && bannerLayout.getVisibility() == View.VISIBLE) mAdView.resume();
 	}
 
 	@Override

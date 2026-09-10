@@ -1,3 +1,3 @@
 • The game now runs in landscape mode
-• The ad banner is no longer shown sideways
+• The ad banner is now shown only on pause and game over
 • Updated for Android 16
