@@ -188,8 +188,6 @@ public class MySurfaceView extends android.view.SurfaceView implements SurfaceHo
 		p.setARGB(255, 0, 0, 200);
 		bg_can.drawRect(bg_can.getClipBounds(), p);
 		p.setARGB(255, 255, 255, 255);
-		bg_can.translate(bg_can.getWidth(), 0);
-		bg_can.rotate(90f);
 		/**
 		 * Draw the gun
 		 */		
@@ -221,8 +219,8 @@ public class MySurfaceView extends android.view.SurfaceView implements SurfaceHo
 		if(can == null) return;				
 		if(bg_image == null || can.getWidth() != bg_image.getWidth() || can.getHeight() != bg_image.getHeight()) {			
 			bg_image = Bitmap.createBitmap(can.getWidth(), can.getHeight(), Bitmap.Config.ARGB_8888);
-			w = can.getHeight();
-			h = can.getWidth();
+			w = can.getWidth();
+			h = can.getHeight();
 			gun = new Gun(w, h);
 			drawBackGround();
 			gun.angle = 1.2;
@@ -237,8 +235,6 @@ public class MySurfaceView extends android.view.SurfaceView implements SurfaceHo
 		 */
 		can.drawBitmap(bg_image, new Rect(0, 0, bg_image.getWidth(), bg_image.getHeight()), 
 				new Rect(0, 0, can.getWidth(), can.getHeight()), p);
-		can.translate(can.getWidth(), 0);
-		can.rotate(90f);
 		/**
 		 * Draw the gun barrel
 		 */				
@@ -577,8 +573,6 @@ public class MySurfaceView extends android.view.SurfaceView implements SurfaceHo
 				p.setARGB(255, 0, 0, 200);
 				bg_can.drawRect(bg_can.getClipBounds(), p);
 				p.setARGB(255, 255, 255, 255);
-				bg_can.translate(bg_can.getWidth(), 0);
-				bg_can.rotate(90f);
 				/**
 				 * Draw the gun
 				 */
@@ -615,7 +609,7 @@ public class MySurfaceView extends android.view.SurfaceView implements SurfaceHo
 		/**
 		 * Draw scores
 		 */
-		p.setTextSize(can.getHeight()/16);
+		p.setTextSize(w/16);
 		p.setTextAlign(Align.CENTER);
 		can.drawText(String.valueOf(score), gun.cent, h - 2, p);
 		/**
@@ -641,17 +635,17 @@ public class MySurfaceView extends android.view.SurfaceView implements SurfaceHo
 	@Override
 	public boolean onTouch(View v, MotionEvent event) {		
 		/**
-		 * Attention!
-		 * Display is not rotated, but the coordinate system is!
-		 * So getY() should be used as getX() and vice versa 
+		 * The activity is locked to landscape and the canvas is no longer rotated,
+		 * so the touch coordinates are the game coordinates: x runs along the
+		 * ground, y from the sky (0) down to the ground (h).
 		 */
 		switch(event.getAction()) {
 			case MotionEvent.ACTION_DOWN: {
 				touchStart = System.currentTimeMillis();
 			}
 			case MotionEvent.ACTION_MOVE: {
-				double dx = event.getY() - gun.cent;
-				double dy = event.getX() - gun.h;
+				double dx = event.getX() - gun.cent;
+				double dy = gun.top - event.getY();
 				if(Math.abs(dy) < 1) {
 					gun.angle = Math.PI/2;
 				}
@@ -664,8 +658,8 @@ public class MySurfaceView extends android.view.SurfaceView implements SurfaceHo
 			}
 			case MotionEvent.ACTION_UP: {
 				if(System.currentTimeMillis() - touchStart < 250) {
-					float x = event.getY();
-					float y = h - event.getX();
+					float x = event.getX();
+					float y = event.getY();
 					// pause button?
 					if(x >= pauseButtonRect.left && x <= pauseButtonRect.right &&
 					   y >= pauseButtonRect.top && y <= pauseButtonRect.bottom) {
@@ -682,33 +676,6 @@ public class MySurfaceView extends android.view.SurfaceView implements SurfaceHo
 				break;
 			}
 		}
-		/*
-		if((event.getX() < gun.h + gun.barrel) && 
-				(event.getY() > gun.left && event.getY() < gun.right)) {
-			// fire
-			addShot++;			
-		}
-		else {
-			double dx = event.getY() - gun.cent;
-			double dy = event.getX() - gun.h;
-			if(Math.abs(dy) < 1) {
-				gun.angle = Math.PI/2;
-			}
-			else {
-				gun.angle = Math.atan2(dy, dx);
-			}
-			//if(event.getY() < gun.cent) {		
-				// rotate gun to the left
-			//	gun.angle += Math.PI / 180;
-			if(gun.angle > Math.PI - 4*Math.PI/180) gun.angle = Math.PI - 4*Math.PI/180;
-			//}
-			//else {
-				// rotate gun to the right
-			//	gun.angle -= Math.PI / 180;
-			if(gun.angle < 4*Math.PI/180) gun.angle = 4*Math.PI/180;
-			//}
-		}
-		//Log.i("Diversant", "angle: " + gun.angle);*/
 		return true;
 	}
 
